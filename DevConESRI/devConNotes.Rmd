@@ -1,0 +1,69 @@
+---
+title: "ESRI Dev Con 2019"
+author: "G Perkins & Jing Zhang"
+date: "April 8, 2019"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Dev Conference Notes for presentation 
+
+
+
+### Part 1 : what is the developers conference ?  
+
+
+- What is it? 
+- Who attends ?
+- What type of material do they cover? 
+- What was it like? 
+
+
+### Part 2: What are some cool things coming down the pipeline? 
+
+
+
+### Part 3 : What are some new development that can improve your day to day GIS life? 
+
+
+
+
+
+What are some relevant new developments coming out ?
+
+-	Collector and survey 123  up dates 
+-	R bridge course and talking to developers 
+
+-	Notebooks 
+
+-	
+
+Most enjoyable thing> 
+
+
+
+
+
+
+
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
