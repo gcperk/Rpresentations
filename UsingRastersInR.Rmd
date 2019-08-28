@@ -1,0 +1,50 @@
+---
+title: "Using Raster Data in R"
+author: "G Perkins"
+date: "28/08/2019"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Using Raster Data in R
+
+
+Topics to cover : 
+
+* Basics; 
+ - Loading Rasters
+ - Checking Projections/extends/cell size 
+ - Summary of values?
+ - Plots
+ 
+* Manipulate Rasters 
+ - agregate/dissagregate
+ - cropping, mask, 
+ - stack 
+ - extract 
+
+Packages to use : sf, dplyr, raster, stars
+ 
+ units()
+
+
+
+---
+
+## References: 
+
+* https://datacarpentry.org/r-raster-vector-geospatial/01-raster-structure/
+
+* https://geocompr.robinlovelace.net/geometric-operations.html#geo-ras
+
+* https://www.youtube.com/watch?v=yhpkx_xO-LE
+
+* https://csgillespie.github.io/efficientR/
+
+
+--- 
+
+
