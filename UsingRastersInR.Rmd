@@ -26,7 +26,7 @@ Topics to cover :
  - stack 
  - extract 
 
-Packages to use : sf, dplyr, raster, stars
+Packages to use : sf, dplyr, raster, stars, terra
  
  units()
 
