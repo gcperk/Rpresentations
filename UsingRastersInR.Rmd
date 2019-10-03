@@ -569,9 +569,9 @@ all.can <- all.sites[country == "Canada",]
 * https://csgillespie.github.io/efficientR/
 
 
-
+https://www.nceas.ucsb.edu/~frazier/RSpatialGuides/OverviewCoordinateReferenceSystems.pdf
 https://datacarpentry.org/r-raster-vector-geospatial/11-vector-raster-integration/index.html
-
+https://rspatial.org/raster/spatial/8-rastermanip.html#introduction
 
 --- 
 
