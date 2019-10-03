@@ -9,32 +9,295 @@ output: ioslides_presentation
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
-## Using Raster Data in R
+## Raster Basics 
+
+- Loading in raster 
+- CRS and projections 
+- Raster Calculations
+- Viewing and mapping Calculations 
 
 
-Topics to cover : 
 
-* Basics; 
- - Loading Rasters
- - Checking Projections/extends/cell size 
- - Summary of values?
- - Plots
- 
-* Manipulate Rasters 
- - agregate/dissagregate
- - cropping, mask, 
- - stack 
- - extract 
+## Packages and Tools : 
 
-Packages to use : sf, dplyr, raster, stars, terra
- 
- units()
+- raster (first released in 2010 Hijman)
+- sp package also supports some special types of data SpatialGridDataFrame & SPatialpixalsDataFrame
+- stars: Spatiotemporal Arrays, Raster and Vector Data Cubes (Pebesma)
+- helper packages : fasterize, rgdal, mapview 
+- Other tools and bridges (RSAGA, RQGIS, RPYGeon)
+
+
+
+## Working with Rasters 
+
+
+```{r set-up , echo = TRUE, message= FALSE}
+
+library(raster)
+
+# set up the data location 
+data.dir <- "C:/Training/R_intermediate/data" ## this need to be fixed to relative path
+
+# see what goodies are in the folder 
+list.files(data.dir)
+
+```
+
+
+
+## Loading rasters
+
+
+```{r loading rasters, echo = TRUE}
+# read in a single raster 
+dem <- raster(file.path(data.dir, "DEM.tif"))
+
+# look at the fundamental raster information : 
+# dimensions, cell size, crs , min and max
+dem
+
+# explore the data a little 
+head(dem) 
+values(dem)
+unique(values(dem))
+
+#quick check of the raster 
+plot(dem)
+
+# more fancy exploring 
+library(rasterVis)
+histogram(dem)
+plot3D(dem)
+
+library(mapview)
+mapview(dem)
+
+```
+
+
+## Check projections
+
+```{r checking projections, echo = TRUE }
+
+# Projections!
+
+crs(dem)
+projectRaster()
+
+
+
+
+
+
+
+```
+
+
+# Manipulating a single raster 
+
+```{r}
+
+
+# Convert from a diffrent projection 
+
+newproj <- "+init=epsg:3005"
+
+# read in reference raster: 
+rast2.5 <- raster("D:/PEM_DATA/Data/Layers/Dec_2.5m/aspect.tif")
+
+dem 
+
+ndvi <- raster(file.path(data.dir, "NDVI.tif"))
+
+# different cell size and resolution projection 
+
+
+# project the values of one raster onto another with a differnt projection 
+ndvi.3005 <- projectRaster(dem, ndvi, )
+
+
+
+crs(ndvi) <- "+init=epsg:3005"
+
+
+
+
+layers.list <- list.files(paste(lidar.dir), pattern = "*.asc",
+
+# read in lidar directory and make a list of files
+lidar.dir <- ("D:/PEM_DATA/Data/Deception_Lidar_products/Deception_f_Lukas_20190627")
+layers.list <- list.files(paste(lidar.dir), pattern = "*.asc",
+
+                      
+
+  r <- raster(file.path(lidar.dir,layers.list[i])) 
+  crs(r) <- "+init=epsg:3005"
+  re <- crop(r, rast2.5)
+  re <- disaggregate(re, fac = 4) # Factor 10m / 4 = 2.5m.
+  res <- resample(re, rast2.5)
+  #stack(res,rast2.5) 
+  writeRaster(res, paste("D:/PEM_DATA/Data/Layers/Dec_2.5m", "/",
+                            gsub(".asc",".tif",outList[i]), sep = ""), 
+              overwrite = TRUE)
+  print(paste("Downscale complete for: ",  outFolder, "/", outList[i], sep = ""))
+  
+}
+
+
+  writeRaster(DTM, file.path(saga_files,"DEM.tif"), overwrite = TRUE)  # save SAGA Version
+
+
+```
+
+
+
+```{r}
+
+#Modifying a raster object (spatial extent) 
+
+
+crop # geographic sibset of a larger raster object 
+      # by extent of by another raster 
+
+extent(dem)
+extent(ndvi)
+
+
+
+
+trim :  crops the outerlayesr containing NAs 
+extend : opposite of trim - pads out the 
+
+
+
+drawExtent() # manually maipulate the file 
+
+
+```
+
+
+
+```{r}
+
+Manipulate multiple rasters
+
+merge 
+
+
+mask()
+
+
+# make a list of files in folder
+rasterlist <- list.files(file.path(data.dir), pattern = ".tif")
+
+
+
+
+
+
+
+
+
+
+
+
+```
+
+
+# references and resources: 
+
+https://rspatial.org/raster/spatial/4-rasterdata.html#introduction
+
+# more oftern we are reading in rasters 
+
+number of columns and rows, the spatial extent, and the Coordinate Reference System.
+
+
+
+
+## Raster Calcult\or 
+
+Summary stats (histogram)
+
+
+
+
+
+
+
+
+Raster calculations
+
+
+
+
+
+ex025<- raster_sum(file.path(input.folder, "Dec_2.5m/aspect.tif"), newproj)
+ex5  <- raster_sum(paste(input.folder, "Dec_5m/aspect.tif", sep = "/"), newproj )
+ex10 <- raster_sum(paste(input.folder, "Dec_10m/aspect.tif", sep = "/"), newproj )
+ex25 <- raster_sum(paste(input.folder, "Dec_25m/aspect.tif", sep = "/"), newproj )
+
+ex <- intersect(ex25, ex10) # min. overlap of 25m and 10m 
+ex <- intersect(ex, ex05)   # min. overlap of 25m and 10m AND 5m
+ex <- intersect(ex, ex025)  # min. overlap of 25m, 10m, 5m AND 2.5m 
+
+ex 
+
+
+
+
+
+
+Plots (mapview, ggplot)
+Exercise 1 (30 min) Alex
+DEM hillshade and differencing, bonus: contours 
+
+
+```{r}
+
+
+#densityplot(dem)
+```
+
+
+histogram
+
+```{r}
+extent(ndvi)
+
+# modisTools 
+
+install.packages("MODISTools") or MODIS 
+
+library(MODISTools)
+
+mt_products()
+mt_bands()
+
+mt_bands(product= Daymet)
+
+mt_dates
+mt_sites()
+
+all.sites <- mt_sites()
+
+all.sites %>% 
+  filter(country == "Canada")
+
+all.can <- all.sites[country == "Canada",]
+
+
+```
+
+
 
 
 
 ---
 
 ## References: 
+
+* https://rspatial.org
 
 * https://datacarpentry.org/r-raster-vector-geospatial/01-raster-structure/
 
