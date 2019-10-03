@@ -56,10 +56,21 @@ dem <- raster(file.path(data.dir, "DEM.tif"))
 # dimensions, cell size, crs , min and max
 dem
 
+res(dem)
+
+summary(dem) # throws an error 
+summary(dem, maxsamp = ncell(dem)) # force to check all raster 
+
 # explore the data a little 
 head(dem) 
 values(dem)
 unique(values(dem))
+
+# dealing with NA data
+dem <- setMinMax(dem) 
+
+minValue(dem)
+maxValue(dem)
 
 #quick check of the raster 
 plot(dem)
@@ -72,23 +83,78 @@ plot3D(dem)
 library(mapview)
 mapview(dem)
 
+# convert to data frame and plot 
+dem_df <- as.data.frame(dem, xy = TRUE)
+str(dem_df)
+
+ggplot() +
+    geom_raster(data = dem_df , aes(x = x, y = y, fill = DEM)) +
+    scale_fill_viridis_c() +
+    coord_quickmap()
+
+# much more time consuming
+
+
+
+
 ```
 
 
-## Check projections
+## Check projections, assign and transform projections
 
 ```{r checking projections, echo = TRUE }
 
-# Projections!
+# Coordinate Reference System (CRS)
+# we can have CRS in three formats (ESPG, Proj4string, WKT) 
+# in proj4string the "+" seperates each element (similar to csv is seperated with a comma)
 
+dem
 crs(dem)
-projectRaster()
 
+# what units are the data in ? 
+crs(dem) # units = m (meters)
 
+#proj=aea +lat_1=50 +lat_2=58.5 +lat_0=45 +lon_0=-126 + x_0=1000000 + y_0=0 
+#ellps=GRS80 
+#towgs84=0,0,0,0,0,0,0
+#units=m 
+#no_defs 
 
+# we can check the information on our ESPG:3005
+CRS("+init=epsg:3005")
 
+projection(dem)  # gives us the string version proj4string
 
+# what about projected data ? 
+# read in another raster 
 
+ndvi <- raster(file.path(data.dir, "NDVI.tif"))
+ndvi 
+
+# what is the cell size of the raster? 
+# what is the projection? 
+
+projection(ndvi) # what is the crs for this raster - is it the same as the dem layer?
+
+#[1] "+proj=utm +zone=9 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0"
+
+# transform a projection to match our dem 
+ndvi.3005 <- projectRaster(ndvi, proj4string(dem))
+
+ndvi.3005 <- projectRaster(ndvi, proj4string(dem), res = 25)
+# or 
+ndvi.3005 <- projectRaster(ndvi, dem) 
+
+ndvi.3005
+
+#> summary(ndvi.3005)
+#              NDVI
+#Min.    -0.2097639
+#1st Qu.  0.5884543
+#Median   0.6328611
+#3rd Qu.  0.6891333
+#Max.     0.8716997
+#NA's     0.0000000
 
 ```
 
@@ -96,7 +162,118 @@ projectRaster()
 # Manipulating a single raster 
 
 ```{r}
+# Looking in detail at our rasters 
 
+# dealing with missing or data errors
+
+#Examples of Bad Data Values:
+
+#The normalized difference vegetation index (NDVI), which is a measure of greenness, has a valid range of -1 to 1. Any value outside of that range would be considered a “bad” or miscalculated value.
+#Reflectance data in an image will often range from 0-1 or 0-10,000 depending upon how the data are scaled. Thus a value greater than 1 or greater than 10,000 is likely caused by an error in either data collection or processing.
+
+#Raster data often has a NoDataValue associated with it. This is a value assigned to pixels where data is missing or no data were collected.
+
+#By default the shape of a raster is always rectangular. So if we have a dataset that has a shape that isn’t rectangular, some pixels at the edge of the raster will have NoDataValues. This often happens when the data were collected by an airplane which only flew over some part of a defined region.
+
+
+
+ndvi.3005
+summary(dem, maxsamp = ncell(ndvi.3005))
+
+ndvi.df <- as.data.frame(ndvi.3005, xy = TRUE)
+
+# GP - THIS TAKES TOO LONG FOR DEMO
+ggplot() +
+    geom_raster(data = ndvi.df , aes(x = x, y = y, fill = NDVI)) +
+    scale_fill_viridis_c(na.value = 'deeppink')+
+    coord_quickmap()
+
+
+#R assigns missing data with the NoDataValue as NA.
+library(viridis)
+
+
+library(ggplot2)
+ggplot2(dem) + 
+scale_fill_viridis_c(na.value = 'deeppink')
+
+NoDataValue
+
+ndvi.3005 
+
+slope <- raster(file.path(data.dir, "./slope_25m.tif", sep = "")) ##read in slope raster
+
+
+```
+
+# matching rasters 
+
+```{r}
+
+# we now know our raster objects are in the same crs
+crs(dem)
+crs(ndvi.3005)
+
+# what about the extent? 
+
+extent(dem)
+extent(ndvi.3005)
+
+# all good matching extents!
+
+
+
+
+
+
+#Modifying a raster object (spatial extent) 
+
+
+crop # geographic sibset of a larger raster object 
+      # by extent of by another raster 
+
+extent(dem)
+extent(ndvi)
+
+
+
+
+trim :  crops the outerlayesr containing NAs 
+extend : opposite of trim - pads out the 
+
+
+
+drawExtent() # manually maipulate the file 
+
+
+```
+
+# working with vector and raster data 
+
+```{r}
+
+
+### converting to rasters 
+library(sf)
+library(dplyr)
+
+roads <- st_read(dsn = data.dir,layer = "Deception_Atlas_Roads_Cleaned", quiet = TRUE) 
+
+roads <- roads %>%
+  st_transform(3005) %>%  # read in classified roads
+  select (ROAD_SURFA)
+
+plot(roads)
+roads <- st_buffer(roads, dist = 25) %>% st_cast("MULTIPOLYGON")
+
+# convert this to a raster 
+library(fasterize)
+rds1 <- fasterize(roads, slope, field = "ROAD_SURFA")###convert to raster
+
+
+
+
+roads <- roads["ROAD_SURFA"]
 
 # Convert from a diffrent projection 
 
@@ -147,41 +324,14 @@ layers.list <- list.files(paste(lidar.dir), pattern = "*.asc",
   writeRaster(DTM, file.path(saga_files,"DEM.tif"), overwrite = TRUE)  # save SAGA Version
 
 
-```
-
-
-
-```{r}
-
-#Modifying a raster object (spatial extent) 
-
-
-crop # geographic sibset of a larger raster object 
-      # by extent of by another raster 
-
-extent(dem)
-extent(ndvi)
-
-
-
-
-trim :  crops the outerlayesr containing NAs 
-extend : opposite of trim - pads out the 
-
-
-
-drawExtent() # manually maipulate the file 
-
-
-```
-
-
-
-```{r}
 
 Manipulate multiple rasters
 
 merge 
+
+
+
+
 
 
 mask()
@@ -190,6 +340,11 @@ mask()
 # make a list of files in folder
 rasterlist <- list.files(file.path(data.dir), pattern = ".tif")
 
+
+
+
+# we can use raster to load in a single band or multi- band
+nlayers(dem)
 
 
 
@@ -215,18 +370,47 @@ number of columns and rows, the spatial extent, and the Coordinate Reference Sys
 
 
 
-## Raster Calcult\or 
+## Raster calculations
 
-Summary stats (histogram)
+```{r}
 
-
-
-
+What if we want to perform a raster calculation 
 
 
 
+# for small sized rasters 
+rasters.out <- dem - ndvi.3005
 
-Raster calculations
+# for larger sized rasters (processing intensive)
+
+
+overlay() # for single layers
+calc() # for stacks 
+
+
+
+outputRaster <- overlay(dem, ndvi.3000, fun = functionName)
+
+CHM_ov_HARV <- overlay(dem,
+                       ndvi.3000,
+                       fun = function(r1, r2) { return( r1 - r2) })
+
+
+# write raster out 
+# write out geotiff. 
+
+
+
+```
+
+
+
+
+
+
+
+
+
 
 
 
