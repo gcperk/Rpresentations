@@ -28,7 +28,7 @@ knitr::opts_chunk$set(echo = FALSE)
 
 
 
-## Working with Rasters 
+## Loading Rasters 
 
 
 ```{r set-up , echo = TRUE, message= FALSE}
@@ -43,10 +43,7 @@ list.files(data.dir)
 
 ```
 
-
-
-## Loading rasters
-
+## Loading Rasters 
 
 ```{r loading rasters, echo = TRUE}
 # read in a single raster 
@@ -56,12 +53,14 @@ dem <- raster(file.path(data.dir, "DEM.tif"))
 # dimensions, cell size, crs , min and max
 dem
 
+# check resolution 
 res(dem)
 
+# check a summary of the data distribution 
 summary(dem) # throws an error 
 summary(dem, maxsamp = ncell(dem)) # force to check all raster 
 
-# explore the data a little 
+# explore the data a little - we have lots of NAs
 head(dem) 
 values(dem)
 unique(values(dem))
@@ -72,6 +71,11 @@ dem <- setMinMax(dem)
 minValue(dem)
 maxValue(dem)
 
+```
+
+## visualise rasters 
+
+```{r Visualise rasters, echo = TRUE}
 #quick check of the raster 
 plot(dem)
 
@@ -93,9 +97,6 @@ ggplot() +
     coord_quickmap()
 
 # much more time consuming
-
-
-
 
 ```
 
@@ -176,6 +177,7 @@ ndvi.3005
 #By default the shape of a raster is always rectangular. So if we have a dataset that has a shape that isn’t rectangular, some pixels at the edge of the raster will have NoDataValues. This often happens when the data were collected by an airplane which only flew over some part of a defined region.
 
 
+# asign NA value ? 
 
 ndvi.3005
 summary(dem, maxsamp = ncell(ndvi.3005))
@@ -193,22 +195,17 @@ ggplot() +
 library(viridis)
 
 
-library(ggplot2)
-ggplot2(dem) + 
-scale_fill_viridis_c(na.value = 'deeppink')
-
-NoDataValue
-
-ndvi.3005 
-
-slope <- raster(file.path(data.dir, "./slope_25m.tif", sep = "")) ##read in slope raster
-
 
 ```
 
-# matching rasters 
+# Working with multiple rasters 
 
-```{r}
+```{r matching multiple raters for use in raster calculater}
+# Oftern we are looking at multiple raster : 
+# many rasters from different datasets
+# working with a stack or brick 
+
+# for example lets 
 
 # we now know our raster objects are in the same crs
 crs(dem)
@@ -221,9 +218,38 @@ extent(ndvi.3005)
 
 # all good matching extents!
 
+# what if we add another layer 
+twi <- raster(file.path(data.dir, "twi.tif"))
+
+crs(twi)
+extent(twi)
+
+# same CRS
+# different call size
+# different extent
+
+# lets convert to the same resolution 
+twi.25 <- aggregate(twi, fact = 5, fun = mean, expand = TRUE)
+
+# check resolution and extent
+res(twi.25)
+extent(twi.25)
+
+r2 = merge(twi.25, dem) # throws an error as not aligned
+
+
+# as the rasters do not match up we need to project values of twi onto a raster with format of dem 
+
+twi.2 <- projectRaster(twi, dem, res = 25, method = "bilinear") 
 
 
 
+# need to match the extents 
+
+
+crop()
+
+dem.t <-trim(dem)
 
 
 #Modifying a raster object (spatial extent) 
@@ -232,10 +258,6 @@ extent(ndvi.3005)
 crop # geographic sibset of a larger raster object 
       # by extent of by another raster 
 
-extent(dem)
-extent(ndvi)
-
-
 
 
 trim :  crops the outerlayesr containing NAs 
@@ -243,15 +265,67 @@ extend : opposite of trim - pads out the
 
 
 
-drawExtent() # manually maipulate the file 
-
-
 ```
 
 # working with vector and raster data 
 
 ```{r}
+# Area of Interest 
+library(sf)
+library(dplyr)
 
+aoi<- st_read(dsn = data.dir,layer = "CanyonCreekBoundary", quiet = TRUE) 
+plot(aoi)
+
+# clip the raster to aoi 
+
+
+
+# Load in the shapefile of the canyon creek extent
+aoi <- shapefile(file.path(input.folder, "Boundry", "CanyonCreekBoundary.shp"))
+
+# Get list contains all raster files we want to clip 
+layers.list = list.dirs(input.folder, full.names = TRUE)
+
+#layers.oi <- c(layers.list[[9]],layers.list[[4]]) #,layers.list[[5]],layers.list[[6]],layers.list[[7]]) # select the folders you want to sample
+layers.oi <- layers.list[[9]]
+  
+for (i in 1:length(layers.oi)){ 
+  i = 1 # tester line 
+  loi = layers.oi[i]
+  rasterList <- list.files(loi, pattern = "*.tif")   # list of rasters
+  outList    <- gsub(".tif", "_cc.tif", rasterList)    # add resolution flag to name 
+  #dir.create(outrasters <- file.path(loi,"cc_aoi"),showWarnings = TRUE)                # name and create outFolder
+ 
+  # Loop through Files cropping and saving 
+   for(ii in 1:length(rasterList)){
+         # ii = 1
+          r <- raster(paste(loi,rasterList[ii],sep ="/"))                         # read raster
+          r <- crop(r, aoi)
+          writeRaster(r, paste(loi, "/", outList[ii], sep = ""))
+          print(paste("Cropped and saved: ",loi , "/", outList[ii], sep = ""))
+      } # end of loop per rasters (one scale0)
+        
+   } # end of loop per scale folder
+  
+foi <- list.files("D:/PEM_DATA/Data/Layers/CanyonCreekAOI/CC_2.5m/",full.names = TRUE)
+
+foi <- list.files("D:/PEM_DATA/Data/Layers/Dec_2.5m/",full.names = TRUE)
+foi <- foi[-20]
+stack(foi)
+
+
+
+
+
+
+
+
+
+
+
+
+#crop a vector to an extend of a 
 
 ### converting to rasters 
 library(sf)
@@ -348,7 +422,10 @@ nlayers(dem)
 
 
 
-
+riteRaster(CHM_ov_HARV, "CHM_HARV.tiff",
+            format="GTiff",
+            overwrite=TRUE,
+            NAflag=-9999)
 
 
 
@@ -490,6 +567,10 @@ all.can <- all.sites[country == "Canada",]
 * https://www.youtube.com/watch?v=yhpkx_xO-LE
 
 * https://csgillespie.github.io/efficientR/
+
+
+
+https://datacarpentry.org/r-raster-vector-geospatial/11-vector-raster-integration/index.html
 
 
 --- 
