@@ -17,7 +17,7 @@ knitr::opts_chunk$set(echo = FALSE)
 - Viewing and mapping Calculations 
 
 
-## Packages and Tools : 
+## Packages history and tools : 
 
 - raster (first released in 2010 Hijman)
 - sp package also supports some special types of data SpatialGridDataFrame & SPatialpixalsDataFrame
@@ -154,7 +154,6 @@ summary(ndvi.3005)
 #NA's     0.0000000
 
 ```
-
 
 # Manipulating a single raster 
 
@@ -412,7 +411,7 @@ DEM hillshade and differencing, bonus: contours
 
 ```{r}
 
-# modisTools 
+# modisTools or MODIStsl
 
 install.packages("MODISTools") or MODIS 
 
@@ -420,6 +419,10 @@ library(MODISTools)
 
 mt_products()
 mt_bands()
+
+
+bands <- mt_bands(product = "MOD11A2")
+head(bands)
 
 mt_bands(product= Daymet)
 
@@ -438,6 +441,35 @@ all.can <- all.sites[country == "Canada",]
 
 
 
+
+
+```{r}
+
+# sentinel imagery 
+
+
+remotes::install_github("ranghetti/sen2r")
+
+library(sen2r)
+
+check_sen2r_deps()
+sen2r()
+
+s2_list(spatial_extent = aoi, time_interval = c(Sys.Date() - 5, Sys.Date()))
+
+
+s2_list(spatial_extent = NULL, tile = NULL, orbit = NULL,
+  time_interval = c(Sys.Date() - 10, Sys.Date()), time_period = "full",
+  level = "auto", apihub = NA, max_cloud = 100,
+  output_type = "vector")
+Arguments
+
+
+
+
+
+
+```
 
 
 ---
