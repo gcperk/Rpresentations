@@ -17,7 +17,6 @@ knitr::opts_chunk$set(echo = FALSE)
 - Viewing and mapping Calculations 
 
 
-
 ## Packages and Tools : 
 
 - raster (first released in 2010 Hijman)
@@ -88,6 +87,7 @@ library(mapview)
 mapview(dem)
 
 # convert to data frame and plot 
+library(ggplot2)
 dem_df <- as.data.frame(dem, xy = TRUE)
 str(dem_df)
 
@@ -96,7 +96,7 @@ ggplot() +
     scale_fill_viridis_c() +
     coord_quickmap()
 
-# much more time consuming
+#...... much more time consuming
 
 ```
 
@@ -112,8 +112,8 @@ ggplot() +
 dem
 crs(dem)
 
-# what units are the data in ? 
-crs(dem) # units = m (meters)
+# Questions: what units are the data in ? 
+# units = m (meters)
 
 #proj=aea +lat_1=50 +lat_2=58.5 +lat_0=45 +lon_0=-126 + x_0=1000000 + y_0=0 
 #ellps=GRS80 
@@ -127,7 +127,7 @@ CRS("+init=epsg:3005")
 projection(dem)  # gives us the string version proj4string
 
 # what about projected data ? 
-# read in another raster 
+# lets read in another raster 
 
 ndvi <- raster(file.path(data.dir, "NDVI.tif"))
 ndvi 
@@ -140,15 +140,11 @@ projection(ndvi) # what is the crs for this raster - is it the same as the dem l
 #[1] "+proj=utm +zone=9 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
 # transform a projection to match our dem 
-ndvi.3005 <- projectRaster(ndvi, proj4string(dem))
-
-ndvi.3005 <- projectRaster(ndvi, proj4string(dem), res = 25)
-# or 
 ndvi.3005 <- projectRaster(ndvi, dem) 
 
 ndvi.3005
 
-#> summary(ndvi.3005)
+summary(ndvi.3005)
 #              NDVI
 #Min.    -0.2097639
 #1st Qu.  0.5884543
@@ -167,7 +163,7 @@ ndvi.3005
 
 # dealing with missing or data errors
 
-#Examples of Bad Data Values:
+# Examples of Bad Data Values:
 
 #The normalized difference vegetation index (NDVI), which is a measure of greenness, has a valid range of -1 to 1. Any value outside of that range would be considered a “bad” or miscalculated value.
 #Reflectance data in an image will often range from 0-1 or 0-10,000 depending upon how the data are scaled. Thus a value greater than 1 or greater than 10,000 is likely caused by an error in either data collection or processing.
@@ -177,22 +173,22 @@ ndvi.3005
 #By default the shape of a raster is always rectangular. So if we have a dataset that has a shape that isn’t rectangular, some pixels at the edge of the raster will have NoDataValues. This often happens when the data were collected by an airplane which only flew over some part of a defined region.
 
 
-# asign NA value ? 
-
-ndvi.3005
-summary(dem, maxsamp = ncell(ndvi.3005))
-
-ndvi.df <- as.data.frame(ndvi.3005, xy = TRUE)
-
-# GP - THIS TAKES TOO LONG FOR DEMO
-ggplot() +
-    geom_raster(data = ndvi.df , aes(x = x, y = y, fill = NDVI)) +
-    scale_fill_viridis_c(na.value = 'deeppink')+
-    coord_quickmap()
-
-
-#R assigns missing data with the NoDataValue as NA.
-library(viridis)
+# # asign NA value ? 
+# 
+# ndvi.3005
+# summary(dem, maxsamp = ncell(ndvi.3005))
+# 
+# ndvi.df <- as.data.frame(ndvi.3005, xy = TRUE)
+# 
+# # GP - THIS TAKES TOO LONG FOR DEMO
+# ggplot() +
+#     geom_raster(data = ndvi.df , aes(x = x, y = y, fill = NDVI)) +
+#     scale_fill_viridis_c(na.value = 'deeppink')+
+#     coord_quickmap()
+# 
+# 
+# #R assigns missing data with the NoDataValue as NA.
+# library(viridis)
 
 
 
@@ -212,11 +208,27 @@ crs(dem)
 crs(ndvi.3005)
 
 # what about the extent? 
-
 extent(dem)
 extent(ndvi.3005)
 
 # all good matching extents!
+
+
+
+
+################# UP TO HERE ####################################
+
+ r <- raster(file.path(lidar.dir,layers.list[i])) 
+  crs(r) <- "+init=epsg:3005"
+  re <- crop(r, rast2.5)
+  re <- disaggregate(re, fac = 4) # Factor 10m / 4 = 2.5m.
+  res <- resample(re, rast2.5)
+  #stack(res,rast2.5) 
+  writeRaster(res, paste("D:/PEM_DATA/Data/Layers/Dec_2.5m", "/",
+                            gsub(".asc",".tif",outList[i]), sep = ""), 
+              overwrite = TRUE)
+  print(paste("Downscale complete for: ",  outFolder, "/", outList[i], sep = ""))
+
 
 # what if we add another layer 
 twi <- raster(file.path(data.dir, "twi.tif"))
@@ -243,26 +255,18 @@ r2 = merge(twi.25, dem) # throws an error as not aligned
 twi.2 <- projectRaster(twi, dem, res = 25, method = "bilinear") 
 
 
-
+# UP TO HERE -------------------------------
 # need to match the extents 
-
-
-crop()
 
 dem.t <-trim(dem)
 
-
 #Modifying a raster object (spatial extent) 
-
 
 crop # geographic sibset of a larger raster object 
       # by extent of by another raster 
 
-
-
 trim :  crops the outerlayesr containing NAs 
 extend : opposite of trim - pads out the 
-
 
 
 ```
@@ -270,66 +274,21 @@ extend : opposite of trim - pads out the
 # working with vector and raster data 
 
 ```{r}
-# Area of Interest 
+# Crop rasters to an area of Interest  
+
 library(sf)
 library(dplyr)
 
 aoi<- st_read(dsn = data.dir,layer = "CanyonCreekBoundary", quiet = TRUE) 
 plot(aoi)
 
-# clip the raster to aoi 
-
-
-
-# Load in the shapefile of the canyon creek extent
-aoi <- shapefile(file.path(input.folder, "Boundry", "CanyonCreekBoundary.shp"))
-
-# Get list contains all raster files we want to clip 
-layers.list = list.dirs(input.folder, full.names = TRUE)
-
-#layers.oi <- c(layers.list[[9]],layers.list[[4]]) #,layers.list[[5]],layers.list[[6]],layers.list[[7]]) # select the folders you want to sample
-layers.oi <- layers.list[[9]]
-  
-for (i in 1:length(layers.oi)){ 
-  i = 1 # tester line 
-  loi = layers.oi[i]
-  rasterList <- list.files(loi, pattern = "*.tif")   # list of rasters
-  outList    <- gsub(".tif", "_cc.tif", rasterList)    # add resolution flag to name 
-  #dir.create(outrasters <- file.path(loi,"cc_aoi"),showWarnings = TRUE)                # name and create outFolder
- 
-  # Loop through Files cropping and saving 
-   for(ii in 1:length(rasterList)){
-         # ii = 1
-          r <- raster(paste(loi,rasterList[ii],sep ="/"))                         # read raster
-          r <- crop(r, aoi)
-          writeRaster(r, paste(loi, "/", outList[ii], sep = ""))
-          print(paste("Cropped and saved: ",loi , "/", outList[ii], sep = ""))
-      } # end of loop per rasters (one scale0)
-        
-   } # end of loop per scale folder
-  
-foi <- list.files("D:/PEM_DATA/Data/Layers/CanyonCreekAOI/CC_2.5m/",full.names = TRUE)
-
-foi <- list.files("D:/PEM_DATA/Data/Layers/Dec_2.5m/",full.names = TRUE)
-foi <- foi[-20]
-stack(foi)
+# crop a single raster 
+dem.c <- crop(dem, aoi)
 
 
 
 
-
-
-
-
-
-
-
-
-#crop a vector to an extend of a 
-
-### converting to rasters 
-library(sf)
-library(dplyr)
+# convert polygon to raster and crop 
 
 roads <- st_read(dsn = data.dir,layer = "Deception_Atlas_Roads_Cleaned", quiet = TRUE) 
 
@@ -342,131 +301,67 @@ roads <- st_buffer(roads, dist = 25) %>% st_cast("MULTIPOLYGON")
 
 # convert this to a raster 
 library(fasterize)
-rds1 <- fasterize(roads, slope, field = "ROAD_SURFA")###convert to raster
+rroads <- fasterize(roads, dem, field = "ROAD_SURFA")###convert to raster
 
+# crop to the aoi or could crop as a vector 
+roads.c <- crop(rroads, aoi)
 
-
-
-roads <- roads["ROAD_SURFA"]
-
-# Convert from a diffrent projection 
-
-newproj <- "+init=epsg:3005"
-
-# read in reference raster: 
-rast2.5 <- raster("D:/PEM_DATA/Data/Layers/Dec_2.5m/aspect.tif")
-
-dem 
-
-ndvi <- raster(file.path(data.dir, "NDVI.tif"))
-
-# different cell size and resolution projection 
-
-
-# project the values of one raster onto another with a differnt projection 
-ndvi.3005 <- projectRaster(dem, ndvi, )
-
-
-
-crs(ndvi) <- "+init=epsg:3005"
-
-
-
-
-layers.list <- list.files(paste(lidar.dir), pattern = "*.asc",
-
-# read in lidar directory and make a list of files
-lidar.dir <- ("D:/PEM_DATA/Data/Deception_Lidar_products/Deception_f_Lukas_20190627")
-layers.list <- list.files(paste(lidar.dir), pattern = "*.asc",
-
-                      
-
-  r <- raster(file.path(lidar.dir,layers.list[i])) 
-  crs(r) <- "+init=epsg:3005"
-  re <- crop(r, rast2.5)
-  re <- disaggregate(re, fac = 4) # Factor 10m / 4 = 2.5m.
-  res <- resample(re, rast2.5)
-  #stack(res,rast2.5) 
-  writeRaster(res, paste("D:/PEM_DATA/Data/Layers/Dec_2.5m", "/",
-                            gsub(".asc",".tif",outList[i]), sep = ""), 
-              overwrite = TRUE)
-  print(paste("Downscale complete for: ",  outFolder, "/", outList[i], sep = ""))
-  
-}
-
-
-  writeRaster(DTM, file.path(saga_files,"DEM.tif"), overwrite = TRUE)  # save SAGA Version
-
-
-
-Manipulate multiple rasters
-
-merge 
-
-
-
-
-
-
-mask()
-
-
-# make a list of files in folder
-rasterlist <- list.files(file.path(data.dir), pattern = ".tif")
-
-
-
-
-# we can use raster to load in a single band or multi- band
-nlayers(dem)
-
-
-
-riteRaster(CHM_ov_HARV, "CHM_HARV.tiff",
-            format="GTiff",
-            overwrite=TRUE,
-            NAflag=-9999)
-
-
-
-
-
+plot(st_geometry(aoi))
+plot(rroads, add = T) # extends past the linear aoi as a raster 
 
 
 ```
-
-
-# references and resources: 
-
-https://rspatial.org/raster/spatial/4-rasterdata.html#introduction
-
-# more oftern we are reading in rasters 
-
-number of columns and rows, the spatial extent, and the Coordinate Reference System.
-
-
 
 
 ## Raster calculations
 
 ```{r}
 
-What if we want to perform a raster calculation 
+# Raster stacks and Bricks 
+
+raster.s <- stack(dem.c,  roads.c)
+
+nlayers(raster.s)
+nlayers(dem.c)
+
+#Make a Threat brick for analysis
+ThreatBrick <- stack(HumanDensityR,LivestockDensityR,HuntDDensR,SecureR,FrontCountryR,RdDensR)
+names(ThreatBrick) <- c('HumanDensity','LivestockDensity','HunterDensity','SecureHabitat','FrontCountry','RoadDensity')
+Threat_file <- file.path("tmp/ThreatBrick")
+saveRDS(ThreatBrick, file = Threat_file)
 
 
+# extract values within the study area 
+# read in csv and convert to spatial points 
+sites <- read.csv(file.path(data.dir, "Deception_samples.csv"))
+# convert to spatial points 
+
+
+raster::extract(sites, raster.s )
+
+
+
+# some plots ?????
+
+
+
+
+
+
+
+
+# Raster Calculations 
 
 # for small sized rasters 
 rasters.out <- dem - ndvi.3005
 
 # for larger sized rasters (processing intensive)
-
-
 overlay() # for single layers
 calc() # for stacks 
 
 
-
 outputRaster <- overlay(dem, ndvi.3000, fun = functionName)
+
 
 CHM_ov_HARV <- overlay(dem,
                        ndvi.3000,
@@ -476,6 +371,10 @@ CHM_ov_HARV <- overlay(dem,
 # write raster out 
 # write out geotiff. 
 
+writeRaster(CHM_ov_HARV, "CHM_HARV.tiff",
+            format="GTiff",
+            overwrite=TRUE,
+            NAflag=-9999)
 
 
 ```
@@ -491,18 +390,6 @@ CHM_ov_HARV <- overlay(dem,
 
 
 
-
-
-ex025<- raster_sum(file.path(input.folder, "Dec_2.5m/aspect.tif"), newproj)
-ex5  <- raster_sum(paste(input.folder, "Dec_5m/aspect.tif", sep = "/"), newproj )
-ex10 <- raster_sum(paste(input.folder, "Dec_10m/aspect.tif", sep = "/"), newproj )
-ex25 <- raster_sum(paste(input.folder, "Dec_25m/aspect.tif", sep = "/"), newproj )
-
-ex <- intersect(ex25, ex10) # min. overlap of 25m and 10m 
-ex <- intersect(ex, ex05)   # min. overlap of 25m and 10m AND 5m
-ex <- intersect(ex, ex025)  # min. overlap of 25m, 10m, 5m AND 2.5m 
-
-ex 
 
 
 
@@ -521,10 +408,9 @@ DEM hillshade and differencing, bonus: contours
 ```
 
 
-histogram
+# multiband rasters 
 
 ```{r}
-extent(ndvi)
 
 # modisTools 
 
@@ -569,9 +455,8 @@ all.can <- all.sites[country == "Canada",]
 * https://csgillespie.github.io/efficientR/
 
 
+
 https://www.nceas.ucsb.edu/~frazier/RSpatialGuides/OverviewCoordinateReferenceSystems.pdf
-https://datacarpentry.org/r-raster-vector-geospatial/11-vector-raster-integration/index.html
-https://rspatial.org/raster/spatial/8-rastermanip.html#introduction
 
 --- 
 
