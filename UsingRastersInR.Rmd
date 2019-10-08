@@ -9,12 +9,13 @@ output: ioslides_presentation
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
-## Raster Basics 
+## 1. Raster Basics 
 
 - Loading in raster 
 - CRS and projections 
 - Raster Calculations
 - Viewing and mapping Calculations 
+- Exercise.....
 
 
 ## Packages history and tools : 
@@ -26,9 +27,19 @@ knitr::opts_chunk$set(echo = FALSE)
 - Other tools and bridges (RSAGA, RQGIS, RPYGeon)
 
 
+## Using Rasters in R : Work flow 
 
-## Loading Rasters 
+-  Many geospatial data work flows rely on raster data sets; this covers everything from elevation data, to remote sensed data, lidar and many others. 
+- Often you need to work with both raster and vector data sets. 
+- Today we will introduce how read in, check, visualise raster datasets and work through the common functions and how to use them. 
 
+
+## Your Task: 
+You are given co-ordinates for a study area - download the data and provide a summary of the elevation. 
+
+
+
+## Load packages and set up data folder 
 
 ```{r set-up , echo = TRUE, message= FALSE}
 
@@ -45,6 +56,7 @@ list.files(data.dir)
 ## Loading Rasters 
 
 ```{r loading rasters, echo = TRUE}
+
 # read in a single raster 
 dem <- raster(file.path(data.dir, "DEM.tif"))
 
@@ -55,6 +67,7 @@ dem
 # check resolution 
 res(dem)
 
+
 # check a summary of the data distribution 
 summary(dem) # throws an error 
 summary(dem, maxsamp = ncell(dem)) # force to check all raster 
@@ -64,15 +77,31 @@ head(dem)
 values(dem)
 unique(values(dem))
 
+
 # dealing with NA data
 dem <- setMinMax(dem) 
+
+# set NA values 
+NAvalue(dem) = -9999
+
+# set NA values 
 
 minValue(dem)
 maxValue(dem)
 
+# subset to only include the peaks 
+
+dem.peaks <- clamp(dem, lower = 1000, useValues = TRUE )
+
+#slightly different to 
+
+dem.peaks  <- reclassify(dem , cbind(0 , 1000 , NA), right=FALSE)
+
+
+
 ```
 
-## visualise rasters 
+## Visualise rasters 
 
 ```{r Visualise rasters, echo = TRUE}
 #quick check of the raster 
@@ -90,6 +119,8 @@ mapview(dem)
 library(ggplot2)
 dem_df <- as.data.frame(dem, xy = TRUE)
 str(dem_df)
+
+# ggspatial # layer_spatial 
 
 ggplot() +
     geom_raster(data = dem_df , aes(x = x, y = y, fill = DEM)) +
@@ -153,49 +184,142 @@ summary(ndvi.3005)
 #Max.     0.8716997
 #NA's     0.0000000
 
+
+# What if we want to reclassify our rater and summarise the results 
+library(dplyr)
+
+dem.class <- reclassify (dem, c(-Inf, 800, 1,
+                                700, 1000, 2, 
+                                1000, 1250, 3, 
+                                1250, Inf, 4))
+
+plot(dem.class)
+
+
+dem.class <- as.data.frame(dem.class) %>%
+  filter(!is.na(DEM))
+
+dem.class <- dem.class %>%
+  group_by(DEM) %>%
+  summarise(count = n())
+
+
 ```
 
-# Manipulating a single raster 
+
+# Raster Calculation
 
 ```{r}
-# Looking in detail at our rasters 
 
-# dealing with missing or data errors
+# Raster Calculations 
 
-# Examples of Bad Data Values:
+# for small sized rasters 
+rasters.out <- dem - ndvi.3005
 
-#The normalized difference vegetation index (NDVI), which is a measure of greenness, has a valid range of -1 to 1. Any value outside of that range would be considered a “bad” or miscalculated value.
-#Reflectance data in an image will often range from 0-1 or 0-10,000 depending upon how the data are scaled. Thus a value greater than 1 or greater than 10,000 is likely caused by an error in either data collection or processing.
-
-#Raster data often has a NoDataValue associated with it. This is a value assigned to pixels where data is missing or no data were collected.
-
-#By default the shape of a raster is always rectangular. So if we have a dataset that has a shape that isn’t rectangular, some pixels at the edge of the raster will have NoDataValues. This often happens when the data were collected by an airplane which only flew over some part of a defined region.
+# for larger sized rasters (processing intensive)
+overlay() # for single layers
+calc() # for stacks 
 
 
-# # asign NA value ? 
-# 
-# ndvi.3005
-# summary(dem, maxsamp = ncell(ndvi.3005))
-# 
-# ndvi.df <- as.data.frame(ndvi.3005, xy = TRUE)
-# 
-# # GP - THIS TAKES TOO LONG FOR DEMO
-# ggplot() +
-#     geom_raster(data = ndvi.df , aes(x = x, y = y, fill = NDVI)) +
-#     scale_fill_viridis_c(na.value = 'deeppink')+
-#     coord_quickmap()
-# 
-# 
-# #R assigns missing data with the NoDataValue as NA.
-# library(viridis)
+outputRaster <- overlay(dem, ndvi.3000, fun = functionName)
 
+
+CHM_ov_HARV <- overlay(dem,
+                       ndvi.3000,
+                       fun = function(r1, r2) { return( r1 - r2) })
+
+
+# write raster out 
+# write out geotiff. 
+
+writeRaster(CHM_ov_HARV, "CHM_HARV.tiff",
+            format="GTiff",
+            overwrite=TRUE,
+            NAflag=-9999)
+
+```
+
+
+# Exercise 1: 
+
+DEM hillshade and differences 
+
+# read in a slope and aspect raster and create a hillshade 
+# check the crs and cell size 
+
+
+# bonus question: generate a contour map 
+
+```{r}
+
+slope <- raster(file.path(data.dir, "slope.tif")) 
+
+aspect <- raster(file.path(data.dir, "aspect.tif"))
+
+# create a hillshade 
+dem.hill <- hillShade(slope, aspect, 
+                      angle=40, 
+                      direction=270)
+
+plot(dem.hill,
+     col=grey.colors(100, start=0, end=1),
+     legend=F)
+
+
+# export geotiff 
+writeRaster(dem.hill,
+            filename="demhill.tif",
+            format="GTiff",
+            options="COMPRESS=LZW",
+            overwrite = TRUE,
+            NAflag = -9999)
+
+## bonus 
+
+dem.contour <- rasterToContour(dem, maxpixels=100000)
+
+plot(dem.contour, add = T)
+plot(dem.contour)
 
 
 ```
 
-# Working with multiple rasters 
+
+
+
+## 2. Manipulating Rasters 
+
+
+# What about if we want to stack multiple raster layers and extract values ? 
+# How to we match up rasters with different extents and sizes? 
+
+
+
+
+Aggregate/disaggregate 
+Cropping to vector
+Mask to value 
+Rasterize
+Mask to value 
+Stack
+Extract 
+Exercise 2 (30 min) Gen 
+Stack land cover, BEC and DEM 
+
+
+
+
+
+
+
+# Working with multiple rasters : Aggregate and Dissagregate 
 
 ```{r matching multiple raters for use in raster calculater}
+
+
+
+
+
 # Oftern we are looking at multiple raster : 
 # many rasters from different datasets
 # working with a stack or brick 
@@ -211,6 +335,9 @@ extent(dem)
 extent(ndvi.3005)
 
 # all good matching extents!
+
+
+
 
 
 
@@ -270,19 +397,79 @@ extend : opposite of trim - pads out the
 
 ```
 
-# working with vector and raster data 
+
+# Cropping rasters to a vector 
 
 ```{r}
-# Crop rasters to an area of Interest  
+
+# Crop rasters to an area of Interest (raster) 
 
 library(sf)
 library(dplyr)
 
-aoi<- st_read(dsn = data.dir,layer = "CanyonCreekBoundary", quiet = TRUE) 
+aoi<- st_read(dsn = data.dir,layer = "CanyonCreekBoundary", quiet = TRUE) %>%
+ st_transform(3005) 
+
 plot(aoi)
 
 # crop a single raster 
 dem.c <- crop(dem, aoi)
+
+# lets see what is looks like 
+plot(dem)
+plot(dem.c, add = T, col = "red")
+
+
+```
+
+
+```{r}
+# convert polygon to raster and crop 
+
+roads <- st_read(dsn = data.dir,layer = "Deception_Atlas_Roads_Cleaned", quiet = TRUE) 
+
+roads <- roads %>%
+  st_transform(3005) %>%  # read in classified roads
+  select (ROAD_SURFA)
+
+plot(roads)
+roads <- st_buffer(roads, dist = 25) %>% st_cast("MULTIPOLYGON")
+
+# convert this to a raster 
+library(fasterize)
+rroads <- fasterize(roads, dem, field = "ROAD_SURFA")###convert to raster
+
+# crop to the aoi or could crop as a vector 
+roads.c <- crop(rroads, aoi)
+
+plot(st_geometry(aoi))
+plot(rroads, add = T) # extends past the linear aoi as a raster 
+
+
+# or 
+
+
+library(bcmaps)
+
+x <- available_layers()
+bec <- get_layer("bec", class = "sf")
+
+st_crs(bec)
+st_crs(aoi)
+
+
+# Crop to area of interest 
+bec_aoi <- st_intersection(bec, aoi)
+
+
+plot(bec_aoi)
+
+
+
+```
+
+
+
 
 
 
@@ -316,6 +503,9 @@ plot(rroads, add = T) # extends past the linear aoi as a raster
 
 ```{r}
 
+
+# summary by groups : areas above some value 
+
 # Raster stacks and Bricks 
 
 raster.s <- stack(dem.c,  roads.c)
@@ -347,35 +537,6 @@ raster::extract(sites, raster.s )
 
 
 
-
-
-# Raster Calculations 
-
-# for small sized rasters 
-rasters.out <- dem - ndvi.3005
-
-# for larger sized rasters (processing intensive)
-overlay() # for single layers
-calc() # for stacks 
-
-
-outputRaster <- overlay(dem, ndvi.3000, fun = functionName)
-
-
-CHM_ov_HARV <- overlay(dem,
-                       ndvi.3000,
-                       fun = function(r1, r2) { return( r1 - r2) })
-
-
-# write raster out 
-# write out geotiff. 
-
-writeRaster(CHM_ov_HARV, "CHM_HARV.tiff",
-            format="GTiff",
-            overwrite=TRUE,
-            NAflag=-9999)
-
-
 ```
 
 
@@ -386,25 +547,6 @@ writeRaster(CHM_ov_HARV, "CHM_HARV.tiff",
 
 
 
-
-
-
-
-
-
-
-
-
-Plots (mapview, ggplot)
-Exercise 1 (30 min) Alex
-DEM hillshade and differencing, bonus: contours 
-
-
-```{r}
-
-
-#densityplot(dem)
-```
 
 
 # multiband rasters 
@@ -466,10 +608,65 @@ Arguments
 
 
 
+## lidar 
+install.packages("lidR")
+
+library(lidR)
+
+las <- readLAS(file.path(data.dir,"Lidar", "bcalb_20160813.las"))
+
+plot(las)
+
+thr <- c(0,2,5,10,15)
+edg <- c(0, 1.5)
+chm <- grid_canopy(las, 1, pitfree(thr, edg))
+
+plot(chm)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+getwd()
+download.file("https://pub.data.gov.bc.ca/datasets/177864/tif/bcalb/103k/103K016.zip", destfile = "temp")
+unzip("temp")
+works!
+
+
+```
+
+```{r}
+
+install.packages("elevatr", dep = T)
+library(elevatr)
+
+library(sf)
+
+aoi<- st_read(dsn = data.dir,layer = "CanyonCreekBoundary", quiet = TRUE) 
+plot(aoi)
+
+aoi <- 
+
+
+aoi.sp <- as(aoi, 'Spatial')
+
+strm <- get_elev_raster(aoi, z = 1) 
 
 
 
 ```
+
+
+
 
 
 ---
