@@ -296,28 +296,13 @@ plot(dem.contour)
 
 
 
-Aggregate/disaggregate 
-Cropping to vector
-Mask to value 
-Rasterize
-Mask to value 
-Stack
-Extract 
-Exercise 2 (30 min) Gen 
-Stack land cover, BEC and DEM 
-
-
-
-
-
-
-
-# Working with multiple rasters : Aggregate and Dissagregate 
+## Aggregate/disaggregate 
 
 ```{r matching multiple raters for use in raster calculater}
 
 
 
+## STILL TO TIDY UP :
 
 
 # Oftern we are looking at multiple raster : 
@@ -398,7 +383,7 @@ extend : opposite of trim - pads out the
 ```
 
 
-# Cropping rasters to a vector 
+# Cropping Rasters (by raster or by vector) 
 
 ```{r}
 
@@ -419,9 +404,9 @@ dem.c <- crop(dem, aoi)
 plot(dem)
 plot(dem.c, add = T, col = "red")
 
-
 ```
 
+# rasterise values 
 
 ```{r}
 # convert polygon to raster and crop 
@@ -461,50 +446,42 @@ st_crs(aoi)
 # Crop to area of interest 
 bec_aoi <- st_intersection(bec, aoi)
 
-
 plot(bec_aoi)
 
+# create a key to reclassify ##STILL TO DO .....
+
+map.key <- as.data.frame(bec_aoi)
 
 
-```
+# convert to a raster 
+bec_aoi <- fasterize(bec_aoi, dem.c, field = "MAP_LABEL") ###convert to raster
 
-
-
-
-
-
-
-# convert polygon to raster and crop 
-
-roads <- st_read(dsn = data.dir,layer = "Deception_Atlas_Roads_Cleaned", quiet = TRUE) 
-
-roads <- roads %>%
-  st_transform(3005) %>%  # read in classified roads
-  select (ROAD_SURFA)
-
-plot(roads)
-roads <- st_buffer(roads, dist = 25) %>% st_cast("MULTIPOLYGON")
-
-# convert this to a raster 
-library(fasterize)
-rroads <- fasterize(roads, dem, field = "ROAD_SURFA")###convert to raster
-
-# crop to the aoi or could crop as a vector 
-roads.c <- crop(rroads, aoi)
-
-plot(st_geometry(aoi))
-plot(rroads, add = T) # extends past the linear aoi as a raster 
 
 
 ```
 
 
-## Raster calculations
 
 ```{r}
 
 
-# summary by groups : areas above some value 
+Mask to value 
+
+
+
+
+
+
+```
+
+
+
+
+
+
+## Stack Rasters 
+
+```{r}
 
 # Raster stacks and Bricks 
 
@@ -519,8 +496,15 @@ names(ThreatBrick) <- c('HumanDensity','LivestockDensity','HunterDensity','Secur
 Threat_file <- file.path("tmp/ThreatBrick")
 saveRDS(ThreatBrick, file = Threat_file)
 
+```
 
-# extract values within the study area 
+# Extract values 
+
+```{r}
+
+# extract values 
+
+
 # read in csv and convert to spatial points 
 sites <- read.csv(file.path(data.dir, "Deception_samples.csv"))
 # convert to spatial points 
@@ -532,14 +516,18 @@ raster::extract(sites, raster.s )
 
 # some plots ?????
 
-
-
-
-
-
 ```
 
 
+
+## Exercise 2: 
+
+
+
+
+
+Exercise 2 (30 min) Gen 
+Stack land cover, BEC and DEM 
 
 
 
